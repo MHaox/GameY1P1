@@ -1,0 +1,110 @@
+﻿<Window x:Class="AvondschoolGame.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Het Mysterie van de Avondschool"
+        Width="960" Height="640" MinWidth="640" MinHeight="480"
+        Background="#1B263B"
+        WindowStartupLocation="CenterScreen"
+        KeyDown="Window_KeyDown">
+
+    <Window.Resources>
+        <!-- Palet A -->
+        <SolidColorBrush x:Key="NightBlue"   Color="#1B263B"/>
+        <SolidColorBrush x:Key="SteelBlue"   Color="#415A77"/>
+        <SolidColorBrush x:Key="Flashlight"  Color="#FCA311"/>
+        <SolidColorBrush x:Key="GhostCyan"   Color="#00B4D8"/>
+
+        <Style x:Key="MenuButton" TargetType="Button">
+            <Setter Property="Width" Value="260"/>
+            <Setter Property="Height" Value="52"/>
+            <Setter Property="Margin" Value="0,8"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource NightBlue}"/>
+            <Setter Property="Background" Value="{StaticResource Flashlight}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background"
+                                        Value="{StaticResource GhostCyan}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <!-- ============ START SCREEN ============ -->
+        <Grid x:Name="StartScreen">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="3*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" VerticalAlignment="Center">
+                <TextBlock Text="HET MYSTERIE VAN"
+                           FontFamily="Consolas" FontSize="28"
+                           Foreground="{StaticResource SteelBlue}"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="DE AVONDSCHOOL"
+                           FontFamily="Consolas" FontSize="52" FontWeight="Bold"
+                           Foreground="{StaticResource Flashlight}"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" VerticalAlignment="Top"
+                        HorizontalAlignment="Center">
+                <Button Content="START SPEL" Style="{StaticResource MenuButton}"
+                        Click="StartButton_Click"/>
+                <Button Content="HOE WERKT HET?" Style="{StaticResource MenuButton}"
+                        Click="HelpButton_Click"/>
+                <Button Content="AFSLUITEN" Style="{StaticResource MenuButton}"
+                        Click="QuitButton_Click"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="2" Text="Pijltjes / WASD = lopen"
+                       FontFamily="Consolas" FontSize="14"
+                       Foreground="{StaticResource GhostCyan}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- ============ GAME SCREEN ============ -->
+        <Grid x:Name="GameScreen" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- HUD -->
+            <Border Grid.Row="0" Background="#0E1522" Padding="12,6">
+                <DockPanel>
+                    <TextBlock x:Name="KeysText" DockPanel.Dock="Right"
+                               Text="Sleutels: 0" FontFamily="Consolas" FontSize="16"
+                               Foreground="{StaticResource Flashlight}"/>
+                    <TextBlock x:Name="MessageText"
+                               Text="Je wordt wakker in de mediatheek..."
+                               FontFamily="Consolas" FontSize="16"
+                               Foreground="{StaticResource GhostCyan}"/>
+                </DockPanel>
+            </Border>
+
+            <!-- Game canvas (scales to window) -->
+            <Viewbox Grid.Row="1" Stretch="Uniform">
+                <Canvas x:Name="GameCanvas" Background="{StaticResource NightBlue}"/>
+            </Viewbox>
+        </Grid>
+    </Grid>
+</Window>
