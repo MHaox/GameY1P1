@@ -102,7 +102,7 @@
             </Border>
 
             <!-- Game canvas (scales to window) -->
-            <Viewbox Grid.Row="1" Stretch="Uniform">
+            <Viewbox Grid.Row="1" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Canvas x:Name="GameCanvas" Background="{StaticResource NightBlue}"/>
             </Viewbox>
         </Grid>

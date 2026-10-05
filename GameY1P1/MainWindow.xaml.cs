@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -8,7 +10,11 @@ namespace AvondschoolGame;
 
 public partial class MainWindow : Window
 {
-    private const int TileSize = 32;
+    // Isometric dimensions for proper diamond tiles
+    private const int TileWidth = 64;   // Width of isometric tile
+    private const int TileHeight = 32;  // Height of isometric tile
+    private const int OffsetX = 50;    // X offset to center view
+    private const int OffsetY = 300;    // Y offset to center view
 
     // # = muur, . = vloer, D = deur (op slot), K = sleutel
     private static readonly string[] Map =
@@ -27,8 +33,8 @@ public partial class MainWindow : Window
     };
 
     private char[][] _tiles = null!;
-    private readonly Dictionary<(int x, int y), Rectangle> _tileShapes = new();
-    private Rectangle _player = null!;
+    private readonly Dictionary<(int x, int y), Polygon> _tileShapes = new();
+    private Ellipse _player = null!;
     private int _px = 9, _py = 8;
     private int _keys;
     private bool _inQuiz;
@@ -78,50 +84,90 @@ public partial class MainWindow : Window
         _tileShapes.Clear();
 
         int rows = _tiles.Length, cols = _tiles[0].Length;
-        GameCanvas.Width = cols * TileSize;
-        GameCanvas.Height = rows * TileSize;
+
+        // Canvas size based only on grid dimensions, not affected by offset
+        GameCanvas.Width = (cols + rows) * (TileWidth / 2) + 100;
+        GameCanvas.Height = (cols + rows) * (TileHeight / 2) + 100;
 
         for (int y = 0; y < rows; y++)
+        {
             for (int x = 0; x < cols; x++)
             {
-                var rect = new Rectangle { Width = TileSize, Height = TileSize };
-                Canvas.SetLeft(rect, x * TileSize);
-                Canvas.SetTop(rect, y * TileSize);
-                GameCanvas.Children.Add(rect);
-                _tileShapes[(x, y)] = rect;
+                // Create isometric diamond polygon
+                var polygon = CreateIsometricTile();
+
+                // Calculate isometric position (rotated 90 degrees clockwise)
+                int isoX = (y + x) * (TileWidth / 2) + OffsetX;
+                int isoY = (y - x) * (TileHeight / 2) + OffsetY;
+
+                Canvas.SetLeft(polygon, isoX);
+                Canvas.SetTop(polygon, isoY);
+
+                // Z-index for depth sorting
+                Panel.SetZIndex(polygon, x + y);
+
+                GameCanvas.Children.Add(polygon);
+                _tileShapes[(x, y)] = polygon;
                 PaintTile(x, y);
             }
+        }
 
-        // Speler (placeholder vierkantje, later vervangen door sprite)
-        _player = new Rectangle
+        // Add player as ellipse
+        _player = new Ellipse
         {
-            Width = TileSize - 8,
-            Height = TileSize - 8,
-            Fill = Ghost,
-            RadiusX = 4,
-            RadiusY = 4
+            Width = TileWidth / 2,
+            Height = TileHeight,
+            Fill = Ghost
         };
         GameCanvas.Children.Add(_player);
         PlacePlayer();
     }
 
+    private Polygon CreateIsometricTile()
+    {
+        // Create a diamond shape for isometric tile
+        var polygon = new Polygon
+        {
+            Points = new PointCollection
+            {
+                new Point(TileWidth / 2, 0),              // Top
+                new Point(TileWidth, TileHeight / 2),     // Right
+                new Point(TileWidth / 2, TileHeight),     // Bottom
+                new Point(0, TileHeight / 2)               // Left
+            },
+            StrokeThickness = 1,
+            Stroke = new SolidColorBrush(Color.FromRgb(0x1B, 0x26, 0x3B))
+        };
+        return polygon;
+    }
+
     private void PaintTile(int x, int y)
     {
-        var rect = _tileShapes[(x, y)];
-        rect.Fill = _tiles[y][x] switch
+        if (!_tileShapes.ContainsKey((x, y)))
+            return;
+
+        var polygon = _tileShapes[(x, y)];
+        polygon.Fill = _tiles[y][x] switch
         {
             '#' => Wall,
             'D' => Door,
-            'K' => Door,   // sleutel: later eigen sprite
+            'K' => new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00)), // Gold for key
             _ => (x + y) % 2 == 0 ? Floor : FloorAlt
         };
-        rect.RadiusX = rect.RadiusY = _tiles[y][x] == 'K' ? 12 : 0;
     }
 
     private void PlacePlayer()
     {
-        Canvas.SetLeft(_player, _px * TileSize + 4);
-        Canvas.SetTop(_player, _py * TileSize + 4);
+        // Calculate isometric position (rotated 90 degrees clockwise)
+        int isoX = (_py + _px) * (TileWidth / 2) + OffsetX;
+        int isoY = (_py - _px) * (TileHeight / 2) + OffsetY;
+
+        // Center player on the tile
+        Canvas.SetLeft(_player, isoX + (TileWidth / 4) - (_player.Width / 2));
+        Canvas.SetTop(_player, isoY + (TileHeight / 2) - (_player.Height / 2));
+
+        // Render player above the floor tiles
+        Panel.SetZIndex(_player, _px + _py + 1000);
     }
 
     // ---------- Input / movement ----------
@@ -131,10 +177,10 @@ public partial class MainWindow : Window
 
         (int dx, int dy) = e.Key switch
         {
-            Key.Up or Key.W => (0, -1),
-            Key.Down or Key.S => (0, 1),
-            Key.Left or Key.A => (-1, 0),
-            Key.Right or Key.D => (1, 0),
+            Key.Up or Key.W => (1, 0),      // Up becomes Right
+            Key.Down or Key.S => (-1, 0),   // Down becomes Left
+            Key.Left or Key.A => (0, -1),   // Left becomes Up
+            Key.Right or Key.D => (0, 1),   // Right becomes Down
             _ => (0, 0)
         };
 
@@ -152,6 +198,10 @@ public partial class MainWindow : Window
 
     private void TryMove(int nx, int ny)
     {
+        // Bounds checking - can't move outside the map
+        if (nx < 0 || ny < 0 || ny >= _tiles.Length || nx >= _tiles[0].Length)
+            return;
+
         char tile = _tiles[ny][nx];
 
         switch (tile)
@@ -180,7 +230,6 @@ public partial class MainWindow : Window
     {
         _inQuiz = true;
 
-        // TODO: vervang door een echt quiz-paneel (taal / rekenen, turn-based)
         var result = MessageBox.Show("Wat is 7 x 8?\n\nJa = 56, Nee = 54",
                                      "Slot!", MessageBoxButton.YesNo);
 
